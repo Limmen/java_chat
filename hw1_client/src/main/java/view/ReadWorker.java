@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.OptionalDataException;
 import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import util.Message;
 
@@ -22,6 +23,7 @@ public class ReadWorker extends SwingWorker <Boolean, Integer> {
     private final ObjectInputStream in;
     private boolean running;
     private final MainWindow window;
+    private Message msg;
     
     /**
      *
@@ -41,15 +43,29 @@ public class ReadWorker extends SwingWorker <Boolean, Integer> {
      * @throws Exception
      */
     @Override
-    protected Boolean doInBackground() throws Exception {            
-        running = true;             
+    protected Boolean doInBackground() throws Exception {
+        running = true;
         while(running){
-            Message msg = readMsg();
-            area.setText(area.getText() + msg.getName() + ": " + msg.getString() + "\n");
-            window.requestFocus();
+            msg = readMsg();
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {                        
+                        updateChat();
+                        updateUsers();
+                    }
+                });                                   
         }
         
         return false;
+    }
+    
+    private void updateChat(){
+        area.setText(area.getText() + msg.getName() + ": " + msg.getString() + "\n");
+        window.requestFocus();
+    }
+    
+    private void updateUsers(){
+        window.updateUsers(msg.getUsers());
     }
     
     private Message readMsg(){
@@ -66,9 +82,8 @@ public class ReadWorker extends SwingWorker <Boolean, Integer> {
             running = false;
             return null;
         }        
-        if (msg instanceof Message) {
-            Message message = (Message) msg;
-            return message;
+        if (msg instanceof Message) {            
+            return (Message) msg;
         }
         else{
             return null;

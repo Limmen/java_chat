@@ -16,9 +16,11 @@ import java.net.Socket;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -34,11 +36,12 @@ public class MainWindow {
     
     private JFrame frame;
     private JPanel container;
-    private JPanel connect;
+    private JPanel connectpanel;
     private JPanel chatpanel;
-    private JPanel inputpanel;
+    private JPanel userspanel;
     private JScrollPane chat;
     private JScrollPane messagePane;
+    private JScrollPane usersPane;
     private JTextField host;
     private JTextField port;
     private JTextArea message;
@@ -46,6 +49,8 @@ public class MainWindow {
     private JTextArea chatarea;
     private JButton connectButton;
     private JButton disconnect;
+    private JList usersList;
+    private JButton updateUsers;
     private boolean connected;
     private String hostname;
     private int portnr;
@@ -76,12 +81,14 @@ public class MainWindow {
     private void showGUI(){
         frame = new JFrame("HomeWork 1 ID2212");
         frame.setLayout(new MigLayout());
-        container = new JPanel(new MigLayout("wrap 2"));
-        connect = new JPanel(new MigLayout("wrap 2"));
+        container = new JPanel(new MigLayout("wrap 3"));
+        connectpanel = new JPanel(new MigLayout("wrap 2"));
         chatpanel = new JPanel(new MigLayout("wrap 1"));
+        userspanel = new JPanel(new MigLayout ("wrap 1"));
         createConnectPanel();
         createChatPanel();
-        container.add(connect, "span 1, gapright 40, gapleft 20");
+        createUsersPanel();
+        container.add(connectpanel, "span 1, gapright 40, gapleft 20");
         if(connected){
             container.add(chatpanel, "span 1");
         }
@@ -100,25 +107,25 @@ public class MainWindow {
     }
     
     private void createConnectPanel(){
-        connect.removeAll();
+        connectpanel.removeAll();
         JLabel lbl;
         
         if(connected == false){
             lbl = new JLabel("Connect to a server");
             lbl.setFont(Title);
-            connect.add(lbl, "span 2, gapbottom 10, align center");
+            connectpanel.add(lbl, "span 2, gapbottom 10, align center");
             lbl = new JLabel("Host");
             lbl.setFont(PBold);
             host = new JTextField(25);
             host.setFont(Plain);
-            connect.add(lbl, "span 1");
-            connect.add(host, "span 1");
+            connectpanel.add(lbl, "span 1");
+            connectpanel.add(host, "span 1");
             lbl = new JLabel("Port");
             lbl.setFont(PBold);
             port = new JTextField(25);
             port.setFont(Plain);
-            connect.add(lbl, "span 1");
-            connect.add(port,"span 1");
+            connectpanel.add(lbl, "span 1");
+            connectpanel.add(port,"span 1");
             connectButton = new JButton("Connect");
             connectButton.setFont(Title);
             connectButton.addActionListener(new ActionListener()
@@ -137,25 +144,25 @@ public class MainWindow {
                 }
             });
             
-            connect.add(connectButton, "span 2, gaptop 5");
+            connectpanel.add(connectButton, "span 2, gaptop 5");
             
         }
         else{
             lbl = new JLabel("Connected to: ");
             lbl.setFont(Title);
-            connect.add(lbl, "span 2, gapbottom 10, align center");
+            connectpanel.add(lbl, "span 2, gapbottom 10, align center");
             lbl = new JLabel("Host: ");
             lbl.setFont(PBold);
-            connect.add(lbl, "span 1");
+            connectpanel.add(lbl, "span 1");
             lbl = new JLabel(this.hostname);
             lbl.setFont(Plain);
-            connect.add(lbl, "span 1");
+            connectpanel.add(lbl, "span 1");
             lbl = new JLabel("Port: ");
             lbl.setFont(PBold);
-            connect.add(lbl, "span 1");
+            connectpanel.add(lbl, "span 1");
             lbl = new JLabel(Integer.toString(this.portnr));
             lbl.setFont(Plain);
-            connect.add(lbl, "span 1");
+            connectpanel.add(lbl, "span 1");
             disconnect = new JButton("Disconnect");
             disconnect.setFont(Title);
             disconnect.addActionListener(new ActionListener()
@@ -173,7 +180,7 @@ public class MainWindow {
                     
                 }
             });
-            connect.add(disconnect, "span 2, gaptop 5");
+            connectpanel.add(disconnect, "span 2, gaptop 5");
         }
         
         
@@ -217,8 +224,19 @@ public class MainWindow {
         chatpanel.add(send, "span 1");
         
     }
-    
-    
+    private void createUsersPanel(){
+        userspanel.removeAll();
+        JLabel lbl;
+        
+        lbl = new JLabel("Connected users");
+        lbl.setFont(Plain);
+        userspanel.add(lbl, "span 1");
+        usersList = new JList(new DefaultListModel());
+        usersPane = new JScrollPane(usersList);
+        usersPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        usersPane.setPreferredSize(new Dimension(150, 250));
+        userspanel.add(usersPane, "span 1");        
+    }        
     private void send(String text){
         writeWorker = new WriteWorker(text, out);
         writeWorker.execute();
@@ -249,7 +267,9 @@ public class MainWindow {
             @Override
             public void run() {
                 createConnectPanel();
+                createUsersPanel();
                 container.add(chatpanel, "span 1");
+                container.add(userspanel, "span 1");
                 message.requestFocus();
                 frame.pack();
             }
@@ -257,6 +277,12 @@ public class MainWindow {
         readWorker = new ReadWorker(chatarea,in, this);
         readWorker.execute();
     }
+    
+    public void updateUsers(DefaultListModel model){
+        usersList.setModel(model);
+        frame.pack();
+    }
+    
 
     /**
      *
@@ -271,22 +297,30 @@ public class MainWindow {
     }
     
     private void disconnect(){
-        connectWorker.cancel(true);
-        readWorker.cancel(true);
-        writeWorker.cancel(true);
-        connected = false;
-        disconnectWorker = new DisconnectWorker(clientSocket, out, in);
-        disconnectWorker.execute();
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                createConnectPanel();
-                container.remove(chatpanel);
-                chatarea.setText("");
-                message.setText("");
-                frame.pack();
-            }
-        });
+        if(connectWorker != null)
+            connectWorker.cancel(true);
+        if(readWorker != null)
+            readWorker.cancel(true);
+        if(writeWorker != null)
+            writeWorker.cancel(true);
+        if(connected)
+        {
+            connected = false;
+            disconnectWorker = new DisconnectWorker(clientSocket, out, in);
+            disconnectWorker.execute();
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    createConnectPanel();
+                    container.remove(chatpanel);
+                    container.remove(userspanel);
+                    chatarea.setText("");
+                    message.setText("");
+                    frame.pack();
+                }
+            });
+        }
+        
     }
     
     private void exit(){

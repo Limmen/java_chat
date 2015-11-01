@@ -6,6 +6,7 @@
 package server;
 
 import java.util.ArrayList;
+import javax.swing.DefaultListModel;
 import util.Message;
 import util.RegularMessage;
 
@@ -50,13 +51,12 @@ public class ChatServer{
         }
     }
 
-    /**
-     *
-     * @param msg
-     * @param id
-     */
-    public void broadcastUsers(Message msg, ChatId id){
-        
+    public DefaultListModel getUsers(){
+        DefaultListModel listModel=new DefaultListModel();
+        for(ChatId user : users){
+            listModel.addElement(user.getName());
+        }
+        return listModel;
     }
 
     /**
@@ -68,15 +68,16 @@ public class ChatServer{
     public ChatId regUser(ClientHandler handler, String name){
         ChatId id = new ChatId(handler,name);
         users.add(id);
-        serverBroadcast(new RegularMessage(name + " just joined the chat"));
+        serverBroadcast(new RegularMessage(name + " joined the chat", "",getUsers()));        
         return id;
     }
 
     /**
      *
      */
-    public void deRegUser(){
-        
+    public void deRegUser(ChatId id){
+        users.remove(id);
+        serverBroadcast(new RegularMessage(id.getName() + " left the chat"));
     }
     
     

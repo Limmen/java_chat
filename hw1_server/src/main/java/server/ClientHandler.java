@@ -24,6 +24,7 @@ public class ClientHandler implements Runnable {
     private final Socket clientSocket;
     private final ChatServer server;
     private boolean running;
+    private ChatId id;
     
     /**
      *
@@ -41,23 +42,33 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {        
         running = true;
-        ChatId id;
         setup();
         id = regUser();
         
         while(running){
             Message msg = readMsg();
-            System.out.println("Server received: " + msg.getString());
-            server.broadcast(msg,id);
+            if(msg != null){
+                Message newMsg = new RegularMessage(msg.getString(), msg.getName(), server.getUsers());
+                server.broadcast(newMsg,id);               
+                }
+                
+            }
         }
                                      
-    }
     
     ChatId regUser(){
-        RegularMessage msg = new RegularMessage("Welcome to the chat \nwhat is your username?", "Server");
+        RegularMessage msg = new RegularMessage("Welcome to the chat \nwhat is your username?", "Server", server.getUsers());
         respond(msg);
-        Message message = readMsg();
-        return server.regUser(this, message.getString());
+        while(true){
+            Object message = readMsg();
+            if(message != null){                
+                    Message user = (Message) message;
+                    return server.regUser(this, user.getString());
+            }
+            else{
+                return null;
+            }
+        }                
     }
     
     void setup(){
@@ -90,9 +101,8 @@ public class ClientHandler implements Runnable {
             return null;
         }
         
-        if (msg instanceof Message) {
-            Message message = (Message) msg;
-            return message;
+        if (msg instanceof Message) {            
+            return (Message) msg;
         }
         else{
             return null;
@@ -103,7 +113,7 @@ public class ClientHandler implements Runnable {
      *
      * @param msg
      */
-    public void respond(Message msg){
+    public void respond(Message msg){      
         try {            
             out.writeObject(msg);
             out.flush();
@@ -131,6 +141,8 @@ public class ClientHandler implements Runnable {
      *
      */
     public void terminate(){
+        if(id != null)
+            server.deRegUser(id);
         this.running = false;
     }
     

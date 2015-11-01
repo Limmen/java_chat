@@ -40,7 +40,6 @@ public class Listener implements Runnable {
             while (running)
             {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Accepted client /server listener");
                 new Thread(new ClientHandler(clientSocket, server)).start();
             }            
         } catch (IOException e)
